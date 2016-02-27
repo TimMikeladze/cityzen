@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { margin: 0; overflow: hidden; }
+canvas { background-color: #99ddaa; }
+</style>
+<script type='text/javascript'>
+window.onload = function () {
+
+  var canvas = document.getElementById('canvas')
+  canvas.height = window.innerHeight
+  canvas.width = window.innerWidth
+
+  var context = canvas.getContext('2d')
+  var isMouseDown = false
+  var lines = []
+  var selectedLineIndex
+  var xOffset = 0
+  var yOffset = 0
+
+  var _clearCanvas = function () {
+    canvas.width = canvas.width
+  }
+
+  var _distance = function (startX, startY, endX, endY) {
+    var diffX = Math.abs(startX - endX)
+    var diffY = Math.abs(startY - endY)
+    var distance = Math.sqrt(diffX * diffX + diffY * diffY)
+    return distance
+  }
+
+  var _getNearbyEndPoint = function (line, mouseX, mouseY) {
+    _nearbyEndPoint = {}
+    if (Math.abs(line.startX - mouseX) < 10) {
+      _nearbyEndPoint.x = line.startX
+    }
+    if (Math.abs(line.endX - mouseX) < 10) {
+      _nearbyEndPoint.x = line.endX
+    }
+    if (Math.abs(line.startY - mouseY) < 10) {
+      _nearbyEndPoint.y = line.startY
+    }
+    if (Math.abs(line.endY - mouseY) < 10) {
+      _nearbyEndPoint.y = line.endY
+    }
+  }
+
+  var _nearbyEndPoint = {}
+
+  canvas.addEventListener('mousedown', function (ev) {
+    lines.push({
+      startX: _nearbyEndPoint.x ? _nearbyEndPoint.x : ev.x,
+      startY: _nearbyEndPoint.y ? _nearbyEndPoint.y : ev.y
+    })
+    isMouseDown = true
+  })
+
+  canvas.addEventListener('mousemove', function (ev) {
+    _clearCanvas()
+    var hoveringLines = []
+    lines.forEach(function (line, lineIndex) {
+      var isCurrentLine = (isMouseDown && lineIndex == lines.length - 1)
+      if (isCurrentLine) {
+        line.endX = ev.x
+        line.endY = ev.y
+      }
+      var isHovering =
+        _distance(line.startX, line.startY, ev.x, ev.y) +
+        _distance(ev.x, ev.y, line.endX, line.endY) -
+        _distance(line.startX, line.startY, line.endX, line.endY)
+        < 1
+      _getNearbyEndPoint(line, ev.x, ev.y)
+      if (!isCurrentLine && (isHovering || _nearbyEndPoint)) {
+        line.hasNearbyEndPoint = (_nearbyEndPoint.x !== undefined)
+        hoveringLines.push(line)
+      } else {
+        context.beginPath()
+        context.moveTo(line.startX, line.startY)
+        context.lineTo(line.endX, line.endY)
+        context.lineWidth = 10
+        context.strokeStyle = (isCurrentLine ? 'rgba(0, 100, 0, 1)' : '#666666')
+        context.stroke()
+      }
+    })
+    hoveringLines.forEach(function (line) {
+      context.beginPath()
+      context.moveTo(line.startX, line.startY)
+      context.lineTo(line.endX, line.endY)
+      context.lineWidth = (line.hasNearbyEndPoint ? 15 : 10)
+      context.strokeStyle = '#000000'
+      context.stroke()
+    })
+    context.beginPath()
+    context.arc(ev.x, ev.y, 15, 0, 2 * Math.PI, true)
+    context.lineWidth = 3
+    context.fillStyle = 'rgba(0, 100, 0, 0.5)'
+    context.fill()
+  })
+
+  canvas.addEventListener('mouseup', function (ev) {
+    isMouseDown = false
+  })
+
+}
+</script>  
+</head>
+<body>
+<canvas id="canvas">
+</canvas>  
+</body>
+</html>
