@@ -6,98 +6,87 @@ body { margin: 0; overflow: hidden; }
 canvas { background-color: #99ddaa; }
 </style>
 <script type="text/javascript">
-window.onload = function () {
+window.onload = () => {
+  'use strict'
 
-  var canvas = document.getElementById('canvas')
-  canvas.height = window.innerHeight
-  canvas.width = window.innerWidth
+  var _canvas = document.getElementById('canvas')
+  var _context = _canvas.getContext('2d')
+  var _isDragging = false
+  var _isRotating = false
+  var _startX
+  var _startY
+  var _endX
+  var _endY
+  var _rotation = Math.PI/10
 
-  var context = canvas.getContext('2d')
-  var isMouseDown = false
-  var lines = []
-  var selectedLineIndex
-  var xOffset = 0
-  var yOffset = 0
-
-  var _clearCanvas = function () {
-    canvas.width = canvas.width
+  var _clearCanvas = () => {
+    _canvas.width = _canvas.width
   }
 
-  var _distance = function (startX, startY, endX, endY) {
+  var _distance = (startX, startY, endX, endY) => {
     var diffX = Math.abs(startX - endX)
     var diffY = Math.abs(startY - endY)
     var distance = Math.sqrt(diffX * diffX + diffY * diffY)
     return distance
   }
 
-  var _getNearbyPoint = function (line, mouseX, mouseY) {
-    if (Math.abs(line.startX - mouseX) < 20 && Math.abs(line.startY - mouseY) < 20) {
-      _nearbyPointX = line.startX
-      _nearbyPointY = line.startY
-    } else if (Math.abs(line.endX - mouseX) < 20 && Math.abs(line.endY - mouseY) < 20) {
-      _nearbyPointX = line.endX
-      _nearbyPointY = line.endY
-    } else {
-      _nearbyPointX = undefined
-      _nearbyPointY = undefined
-    }
+  var _offset = () => {
+    var d = _distance(0, 0, _startX, _startY)
+    var theta = (Math.PI / 2 - _rotation / 2)
+    var z = 2 * d * Math.cos(theta)
+    var phi = Math.PI - theta - Math.acos(_startX / d)
+    var x = z * Math.cos(phi)
+    var y = z * Math.sin(phi)
+    return {x:x,y:y}
   }
 
-  var _nearbyPointX
-  var _nearbyPointY
 
-  canvas.addEventListener('mousedown', function (ev) {
-    lines.push({
-      startX: _nearbyPointX ? _nearbyPointX : ev.x,
-      startY: _nearbyPointY ? _nearbyPointY : ev.y
-    })
-    isMouseDown = true
+  /* Initialization */
+
+  _canvas.height = window.innerHeight
+  _canvas.width = window.innerWidth
+
+
+  /* Event bindings */
+
+  _canvas.addEventListener('mousedown', (event) => {
+    _startX = event.x
+    _startY = event.y
+    _isDragging = true
   })
 
-  canvas.addEventListener('mousemove', function (ev) {
-    _clearCanvas()
-    var hoveringLines = []
-    lines.forEach(function (line, lineIndex) {
-      var isCurrentLine = (isMouseDown && lineIndex == lines.length - 1)
-      if (isCurrentLine) {
-        line.endX = ev.x
-        line.endY = ev.y
-      }
-      //var isHovering =
-      //  _distance(line.startX, line.startY, ev.x, ev.y) +
-      //  _distance(ev.x, ev.y, line.endX, line.endY) -
-      //  _distance(line.startX, line.startY, line.endX, line.endY)
-      //  < 1
-      _getNearbyPoint(line, ev.x, ev.y)
-      if (!isCurrentLine) {
-        line.hasNearbyPoint = (_nearbyPointX !== undefined)
-        hoveringLines.push(line)
+  _canvas.addEventListener('mousemove', (event) => {
+    if (_isDragging) {
+      _clearCanvas()
+      if (_isRotating && _endX) {
+        //TODO Alex
       } else {
-        context.beginPath()
-        context.moveTo(line.startX, line.startY)
-        context.lineTo(line.endX, line.endY)
-        context.lineWidth = 10
-        context.strokeStyle = (isCurrentLine ? 'rgba(0, 100, 0, 1)' : '#666666')
-        context.stroke()
+        _endX = event.x
+        _endY = event.y
       }
-    })
-    hoveringLines.forEach(function (line) {
-      context.beginPath()
-      context.moveTo(line.startX, line.startY)
-      context.lineTo(line.endX, line.endY)
-      context.lineWidth = (line.hasNearbyPoint ? 15 : 10)
-      context.strokeStyle = '#000000'
-      context.stroke()
-    })
-    context.beginPath()
-    context.arc(ev.x, ev.y, 15, 0, 2 * Math.PI, true)
-    context.lineWidth = 3
-    context.fillStyle = 'rgba(0, 100, 0, 0.5)'
-    context.fill()
+      _context.rotate(_rotation)
+      _context.fillStyle = 'rgba(100,100,100,0.5)'
+      var offset = _offset()
+      var x = _startX + offset.x
+      var y = _startY - offset.y
+      _context.fillRect(x, y, _endX - _startX, _endY - _startY)
+    }
   })
 
-  canvas.addEventListener('mouseup', function (ev) {
-    isMouseDown = false
+  _canvas.addEventListener('mouseup', (event) => {
+    _isDragging = false
+    _endX = undefined
+    _endY = undefined
+  })
+
+  window.addEventListener('keydown', (event) => {
+    if (event.ctrlKey) {
+      _isRotating = true
+    }
+  })
+
+  window.addEventListener('keyup', (event) => {
+    _isRotating = false
   })
 
 }
