@@ -11,13 +11,13 @@ window.onload = () => {
 
   var _canvas = document.getElementById('canvas')
   var _context = _canvas.getContext('2d')
-  var _isDragging = false
-  var _isRotating = false
-  var _startX
-  var _startY
   var _endX
   var _endY
-  var _rotation = Math.PI/10
+  var _isDragging = false
+  var _isRotating = false
+  var _rotation = Math.PI / 10
+  var _startX
+  var _startY
 
   var _clearCanvas = () => {
     _canvas.width = _canvas.width
@@ -30,13 +30,23 @@ window.onload = () => {
     return distance
   }
 
-  var _offset = () => {
-    var d = _distance(0, 0, _startX, _startY)
-    var theta = (Math.PI / 2 - _rotation / 2)
-    var z = 2 * d * Math.cos(theta)
-    var phi = Math.PI - theta - Math.acos(_startX / d)
+  var _dimensions = (mouseX, mouseY) => {
+    var z = _distance(_startX, _startY, mouseX, mouseY)
+    var d = mouseX - _startX
+    var theta = Math.acos(d / z)
+    var phi = theta - _rotation
     var x = z * Math.cos(phi)
     var y = z * Math.sin(phi)
+    return {x:x,y:y}
+  }
+
+  var _offset = () => {
+    var d = _distance(0, 0, _startX, _startY)
+    var theta = Math.PI / 2 - _rotation / 2
+    var z = 2 * d * Math.cos(theta)
+    var phi = Math.PI - theta - Math.acos(_startX / d)
+    var x = _startX + z * Math.cos(phi)
+    var y = _startY - z * Math.sin(phi)
     return {x:x,y:y}
   }
 
@@ -58,8 +68,10 @@ window.onload = () => {
   _canvas.addEventListener('mousemove', (event) => {
     if (_isDragging) {
       _clearCanvas()
-      if (_isRotating && _endX) {
-        //TODO Alex
+      if (_isRotating) {
+         _endX =  _endX || event.x
+         _endY =  _endY || event.y
+        // TODO Alex - Set the rotation dynamically based on user input
       } else {
         _endX = event.x
         _endY = event.y
@@ -67,9 +79,8 @@ window.onload = () => {
       _context.rotate(_rotation)
       _context.fillStyle = 'rgba(100,100,100,0.5)'
       var offset = _offset()
-      var x = _startX + offset.x
-      var y = _startY - offset.y
-      _context.fillRect(x, y, _endX - _startX, _endY - _startY)
+      var dimensions = _dimensions(event.x, event.y)
+      _context.fillRect(offset.x, offset.y, dimensions.x, dimensions.y)
     }
   })
 
