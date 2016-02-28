@@ -30,12 +30,12 @@ window.onload = () => {
     return distance
   }
 
-  var _dimensions = (mouseX, mouseY) => {
+  var _dimensions = (endX, endY) => {
     var x, y
-    var z = _distance(_startX, _startY, mouseX, mouseY)
-    var d = mouseX - _startX
+    var z = _distance(_startX, _startY, endX, endY)
+    var d = endX - _startX
     var theta = Math.acos(d / z)
-    if (mouseY > _startY) {
+    if (endY > _startY) {
       var phi = theta - _rotation
       x = z * Math.cos(phi)
       y = z * Math.sin(phi)
@@ -70,31 +70,47 @@ window.onload = () => {
     _startX = event.x
     _startY = event.y
     _isDragging = true
+    // Draw the anchor
+    _clearCanvas()
+    _context.beginPath()
+    _context.fillStyle = 'rgba(20,200,80,0.5)'
+    _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
+    _context.fill()
   })
 
   _canvas.addEventListener('mousemove', (event) => {
+
+    // Set the end point or the rotation angle, if dragging
     if (_isDragging) {
-      _clearCanvas()
       if (_isRotating) {
-         _endX =  _endX || event.x
-         _endY =  _endY || event.y
+         _endX = _endX || event.x
+         _endY = _endY || event.y
         // TODO Alex - Set the rotation dynamically based on user input
       } else {
         _endX = event.x
         _endY = event.y
       }
-      _context.rotate(_rotation)
-      _context.fillStyle = 'rgba(100,100,100,0.5)'
-      var start = _start()
-      var dimensions = _dimensions(event.x, event.y)
-      _context.fillRect(start.x, start.y, dimensions.x, dimensions.y)
     }
+
+    // Draw the rotated rectangle
+    _clearCanvas()
+    _context.save()
+    _context.rotate(_rotation)
+    _context.fillStyle = 'rgba(100,100,100,0.5)'
+    var start = _start()
+    var dimensions = _dimensions(_endX, _endY)
+    _context.fillRect(start.x, start.y, dimensions.x, dimensions.y)
+
+    // Draw the anchor
+    _context.restore()
+    _context.beginPath()
+    _context.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
+    _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
+    _context.fill()
   })
 
   _canvas.addEventListener('mouseup', (event) => {
     _isDragging = false
-    _endX = undefined
-    _endY = undefined
   })
 
   window.addEventListener('keydown', (event) => {
