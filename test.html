@@ -31,16 +31,23 @@ window.onload = () => {
   }
 
   var _dimensions = (mouseX, mouseY) => {
+    var x, y
     var z = _distance(_startX, _startY, mouseX, mouseY)
     var d = mouseX - _startX
     var theta = Math.acos(d / z)
-    var phi = theta - _rotation
-    var x = z * Math.cos(phi)
-    var y = z * Math.sin(phi)
+    if (mouseY > _startY) {
+      var phi = theta - _rotation
+      x = z * Math.cos(phi)
+      y = z * Math.sin(phi)
+    } else {
+      var phi = theta + _rotation
+      x = z * Math.cos(phi)
+      y = -z * Math.sin(phi)
+    }
     return {x:x,y:y}
   }
 
-  var _offset = () => {
+  var _start = () => {
     var d = _distance(0, 0, _startX, _startY)
     var theta = Math.PI / 2 - _rotation / 2
     var z = 2 * d * Math.cos(theta)
@@ -78,9 +85,9 @@ window.onload = () => {
       }
       _context.rotate(_rotation)
       _context.fillStyle = 'rgba(100,100,100,0.5)'
-      var offset = _offset()
+      var start = _start()
       var dimensions = _dimensions(event.x, event.y)
-      _context.fillRect(offset.x, offset.y, dimensions.x, dimensions.y)
+      _context.fillRect(start.x, start.y, dimensions.x, dimensions.y)
     }
   })
 
