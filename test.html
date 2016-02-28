@@ -9,15 +9,41 @@ canvas { background-color: #99ddaa; }
 window.onload = () => {
   'use strict'
 
+
+  var Road = function (startX, startY) {
+    this.startX = startX
+    this.startY = startY
+    this.endX = startX
+    this.endY = startY
+    this.rotation = 0
+  }
+
+  Road.prototype.project = function () {
+
+    // Anchor
+    var a = _distance(0, 0, this.startX, this.startY)
+    var alpha = Math.PI / 2 - this.rotation / 2
+    var b = 2 * a * Math.cos(alpha)
+    var beta = Math.PI - alpha - Math.acos(this.startX / a)
+    this.anchorX = this.startX + b * Math.cos(beta)
+    this.anchorY = this.startY - b * Math.sin(beta)
+
+    // Dimensions
+    var c = _distance(this.startX, this.startY, this.endX, this.endY)
+    var d = this.endX - this.startX
+    var gamma = Math.acos(d / c)
+    var orientation = (this.endY > this.startY) ? 1 : (this.endY == this.startY) ? 0 : -1
+    var delta = gamma - this.rotation * orientation
+    this.dimensionX = c * Math.cos(delta)
+    this.dimensionY = c * Math.sin(delta) * orientation
+  }
+
+
   var _canvas = document.getElementById('canvas')
   var _context = _canvas.getContext('2d')
-  var _dragEndX
-  var _dragEndY
-  var _dragStartX
-  var _dragStartY
   var _isDragging = false
   var _isRotating = false
-  var _rotation = 0
+  var _roads = []
   var _rotationStart
   var _rotationStartX
   var _rotationStartY
@@ -33,50 +59,25 @@ window.onload = () => {
     return distance
   }
 
-  var _dimensions = () => {
-    var x, y
-    var z = _distance(_dragStartX, _dragStartY, _dragEndX, _dragEndY)
-    var d = _dragEndX - _dragStartX
-    var theta = Math.acos(d / z)
-    if (_dragEndY > _dragStartY) {
-      var phi = theta - _rotation
-      x = z * Math.cos(phi)
-      y = z * Math.sin(phi)
-    } else {
-      var phi = theta + _rotation
-      x = z * Math.cos(phi)
-      y = -z * Math.sin(phi)
-    }
-    return {x:x,y:y}
-  }
-
-  var _start = () => {
-    var d = _distance(0, 0, _dragStartX, _dragStartY)
-    var theta = Math.PI / 2 - _rotation / 2
-    var z = 2 * d * Math.cos(theta)
-    var phi = Math.PI - theta - Math.acos(_dragStartX / d)
-    var x = _dragStartX + z * Math.cos(phi)
-    var y = _dragStartY - z * Math.sin(phi)
-    return {x:x,y:y}
+  var _resizeCanvas = () => {    
+    _canvas.height = window.innerHeight
+    _canvas.width = window.innerWidth
   }
 
 
   /* Initialization */
 
-  _canvas.height = window.innerHeight
-  _canvas.width = window.innerWidth
+  _resizeCanvas()
 
 
   /* Event bindings */
 
   _canvas.addEventListener('mousedown', (event) => {
-    _dragStartX = event.x
-    _dragStartY = event.y
+    _roads.push(new Road(event.x, event.y))
     _isDragging = true
 
     // Draw the anchor
     _clearCanvas()
-    _context.beginPath()
     _context.fillStyle = 'rgba(20,200,80,0.5)'
     _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
     _context.fill()
@@ -84,54 +85,65 @@ window.onload = () => {
 
   _canvas.addEventListener('mousemove', (event) => {
 
+    // If dragging, then update the current road
     if (_isDragging) {
-      _dragEndX = event.x
-      _dragEndY = event.y
+
+      // Update the endpoint
+      var road = _roads[_roads.length - 1]
+      road.endX = event.x
+      road.endY = event.y
+
+      // Update the rotation
       if (_isRotating) {
-        var rotationStartToCursor = _distance(_rotationStartX, _rotationStartY, event.x, event.y)
-        var anchorToRotationStart = _distance(_dragStartX, _dragStartY, _rotationStartX, _rotationStartY)
-        var anchorToCursor = _distance(_dragStartX, _dragStartY, event.x, event.y)
+        var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, road.endX, road.endY)
+        var roadStartToRotationStart = _distance(road.startX, road.startY, _rotationStartX, _rotationStartY)
+        var roadStartToRoadEnd = _distance(road.startX, road.startY, road.endX, road.endY)
         var rotationDelta =
           Math.acos(
-            (anchorToCursor * anchorToCursor +
-             anchorToRotationStart * anchorToRotationStart -
-             rotationStartToCursor * rotationStartToCursor) /
-            (2 * anchorToCursor * anchorToRotationStart)
+            (roadStartToRoadEnd * roadStartToRoadEnd +
+             roadStartToRotationStart * roadStartToRotationStart -
+             rotationStartToRoadEnd * rotationStartToRoadEnd) /
+            (2 * roadStartToRoadEnd * roadStartToRotationStart)
           )
-        var orientation = Math.sign((_rotationStartX - _dragStartX) * (event.y - _dragStartY) - (_rotationStartY - _dragStartY) * (event.x - _dragStartX))
-        _rotation = _rotationStart + rotationDelta * orientation
+        var orientation = Math.sign(
+          (_rotationStartX - road.startX) * (road.endY - road.startY) -
+          (_rotationStartY - road.startY) * (road.endX - road.startX)
+        )
+        road.rotation = _rotationStart + rotationDelta * orientation
       }
+
+      // Update the projection
+      road.project()
     }
 
-    // Draw the rotated rectangle
-    _clearCanvas()
-    _context.save()
-    _context.rotate(_rotation)
-    _context.fillStyle = 'rgba(100,100,100,0.5)'
-    var start = _start()
-    var dimensions = _dimensions()
-    _context.fillRect(start.x, start.y, dimensions.x, dimensions.y)
-
     // Draw the anchor
-    _context.restore()
-    _context.beginPath()
+    _clearCanvas()
     _context.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
     _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
     _context.fill()
+
+    // Draw each road
+    _roads.forEach((road) => {
+      _context.rotate(road.rotation)
+      _context.fillStyle = 'rgba(100,100,100,0.5)'
+      _context.fillRect(
+        road.anchorX, road.anchorY,
+        road.dimensionX, road.dimensionY
+      )
+      _context.rotate(-road.rotation)
+    })
   })
 
   _canvas.addEventListener('mouseup', (event) => {
     _isDragging = false
-    _dragEndX = undefined
-    _dragEndY = undefined
-    _rotation = 0
   })
 
   window.addEventListener('keydown', (event) => {
-    if (event.ctrlKey) {
-      _rotationStart = _rotation
-      _rotationStartX = _dragEndX
-      _rotationStartY = _dragEndY
+    if (_isDragging && event.ctrlKey) {
+      var road = _roads[_roads.length - 1]
+      _rotationStart = road.rotation
+      _rotationStartX = road.endX
+      _rotationStartY = road.endY
       _isRotating = true
     }
   })
@@ -139,6 +151,8 @@ window.onload = () => {
   window.addEventListener('keyup', (event) => {
     _isRotating = false
   })
+
+  window.addEventListener('resize', _resizeCanvas)
 
 }
 </script>  
