@@ -11,13 +11,16 @@ window.onload = () => {
 
   var _canvas = document.getElementById('canvas')
   var _context = _canvas.getContext('2d')
-  var _endX
-  var _endY
+  var _dragEndX
+  var _dragEndY
+  var _dragStartX
+  var _dragStartY
   var _isDragging = false
   var _isRotating = false
-  var _rotation = Math.PI / 10
-  var _startX
-  var _startY
+  var _rotation = 0
+  var _rotationStart
+  var _rotationStartX
+  var _rotationStartY
 
   var _clearCanvas = () => {
     _canvas.width = _canvas.width
@@ -30,12 +33,12 @@ window.onload = () => {
     return distance
   }
 
-  var _dimensions = (endX, endY) => {
+  var _dimensions = () => {
     var x, y
-    var z = _distance(_startX, _startY, endX, endY)
-    var d = endX - _startX
+    var z = _distance(_dragStartX, _dragStartY, _dragEndX, _dragEndY)
+    var d = _dragEndX - _dragStartX
     var theta = Math.acos(d / z)
-    if (endY > _startY) {
+    if (_dragEndY > _dragStartY) {
       var phi = theta - _rotation
       x = z * Math.cos(phi)
       y = z * Math.sin(phi)
@@ -48,12 +51,12 @@ window.onload = () => {
   }
 
   var _start = () => {
-    var d = _distance(0, 0, _startX, _startY)
+    var d = _distance(0, 0, _dragStartX, _dragStartY)
     var theta = Math.PI / 2 - _rotation / 2
     var z = 2 * d * Math.cos(theta)
-    var phi = Math.PI - theta - Math.acos(_startX / d)
-    var x = _startX + z * Math.cos(phi)
-    var y = _startY - z * Math.sin(phi)
+    var phi = Math.PI - theta - Math.acos(_dragStartX / d)
+    var x = _dragStartX + z * Math.cos(phi)
+    var y = _dragStartY - z * Math.sin(phi)
     return {x:x,y:y}
   }
 
@@ -67,9 +70,10 @@ window.onload = () => {
   /* Event bindings */
 
   _canvas.addEventListener('mousedown', (event) => {
-    _startX = event.x
-    _startY = event.y
+    _dragStartX = event.x
+    _dragStartY = event.y
     _isDragging = true
+
     // Draw the anchor
     _clearCanvas()
     _context.beginPath()
@@ -80,15 +84,22 @@ window.onload = () => {
 
   _canvas.addEventListener('mousemove', (event) => {
 
-    // Set the end point or the rotation angle, if dragging
     if (_isDragging) {
+      _dragEndX = event.x
+      _dragEndY = event.y
       if (_isRotating) {
-         _endX = _endX || event.x
-         _endY = _endY || event.y
-        // TODO Alex - Set the rotation dynamically based on user input
-      } else {
-        _endX = event.x
-        _endY = event.y
+        var rotationStartToCursor = _distance(_rotationStartX, _rotationStartY, event.x, event.y)
+        var anchorToRotationStart = _distance(_dragStartX, _dragStartY, _rotationStartX, _rotationStartY)
+        var anchorToCursor = _distance(_dragStartX, _dragStartY, event.x, event.y)
+        var rotationDelta =
+          Math.acos(
+            (anchorToCursor * anchorToCursor +
+             anchorToRotationStart * anchorToRotationStart -
+             rotationStartToCursor * rotationStartToCursor) /
+            (2 * anchorToCursor * anchorToRotationStart)
+          )
+        var orientation = Math.sign((_rotationStartX - _dragStartX) * (event.y - _dragStartY) - (_rotationStartY - _dragStartY) * (event.x - _dragStartX))
+        _rotation = _rotationStart + rotationDelta * orientation
       }
     }
 
@@ -98,7 +109,7 @@ window.onload = () => {
     _context.rotate(_rotation)
     _context.fillStyle = 'rgba(100,100,100,0.5)'
     var start = _start()
-    var dimensions = _dimensions(_endX, _endY)
+    var dimensions = _dimensions()
     _context.fillRect(start.x, start.y, dimensions.x, dimensions.y)
 
     // Draw the anchor
@@ -111,10 +122,16 @@ window.onload = () => {
 
   _canvas.addEventListener('mouseup', (event) => {
     _isDragging = false
+    _dragEndX = undefined
+    _dragEndY = undefined
+    _rotation = 0
   })
 
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey) {
+      _rotationStart = _rotation
+      _rotationStartX = _dragEndX
+      _rotationStartY = _dragEndY
       _isRotating = true
     }
   })
