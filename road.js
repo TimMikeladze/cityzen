@@ -1,19 +1,24 @@
-
-var _distance = function (startX, startY, endX, endY) {
-  var diffX = Math.abs(startX - endX)
-  var diffY = Math.abs(startY - endY)
-  var distance = Math.sqrt(diffX * diffX + diffY * diffY)
-  return distance
-}
-
 /* Road class */
-
 var Road = function () {
+  'use strict'
+
+
+  /* Private */
 
   var _isRotating = false
   var _rotationStart
   var _rotationStartX
   var _rotationStartY
+
+  var _distance = function (startX, startY, endX, endY) {
+    var diffX = Math.abs(startX - endX)
+    var diffY = Math.abs(startY - endY)
+    var distance = Math.sqrt(diffX * diffX + diffY * diffY)
+    return distance
+  }
+
+
+  /* Public */
 
   var Road = function (startX, startY) {
     this.endX = startX
