@@ -5,83 +5,16 @@
 body { margin: 0; overflow: hidden; }
 canvas { background-color: #99ddaa; }
 </style>
+<script type="text/javascript" src="road.js"></script>
 <script type="text/javascript">
 window.onload = () => {
-  'use strict'
-
-
-  /* Road class */
-
-  var Road = function (startX, startY) {
-    this.startX = startX
-    this.startY = startY
-    this.endX = startX
-    this.endY = startY
-    this.rotation = 0
-  }
-
-  Road.prototype.contains = function (x, y) {
-    //TODO Alex
-    return false
-  }
-
-  Road.prototype.invalidate = function () {    
-
-    // Anchor
-    var a = _distance(0, 0, this.startX, this.startY)
-    var alpha = Math.PI / 2 - this.rotation / 2
-    var b = 2 * a * Math.cos(alpha)
-    var beta = Math.PI - alpha - Math.acos(this.startX / a)
-    this.anchorX = this.startX + b * Math.cos(beta)
-    this.anchorY = this.startY - b * Math.sin(beta)
-
-    // Dimensions
-    var c = _distance(this.startX, this.startY, this.endX, this.endY)
-    var d = this.endX - this.startX
-    var gamma = Math.acos(d / c)
-    var orientation = Math.sign(this.endY - this.startY)
-    var delta = gamma - this.rotation * orientation
-    this.dimensionX = c * Math.cos(delta)
-    this.dimensionY = c * Math.sin(delta) * orientation
-  }
-
-  Road.prototype.render = function () {
-    _viewportContext.rotate(this.rotation)
-    _viewportContext.fillStyle = this.contains(event.x, event.y) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
-    _viewportContext.fillRect(
-      this.anchorX, this.anchorY,
-      this.dimensionX, this.dimensionY
-    )
-    _viewportContext.rotate(-this.rotation)
-  }
-
-  Road.prototype.updateRotation = function () {    
-    var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, this.endX, this.endY)
-    var roadStartToRotationStart = _distance(this.startX, this.startY, _rotationStartX, _rotationStartY)
-    var roadStartToRoadEnd = _distance(this.startX, this.startY, this.endX, this.endY)
-    var rotationDelta =
-      Math.acos(
-        (roadStartToRoadEnd * roadStartToRoadEnd +
-         roadStartToRotationStart * roadStartToRotationStart -
-         rotationStartToRoadEnd * rotationStartToRoadEnd) /
-        (2 * roadStartToRoadEnd * roadStartToRotationStart)
-      )
-    var orientation = Math.sign(
-      (_rotationStartX - this.startX) * (this.endY - this.startY) -
-      (_rotationStartY - this.startY) * (this.endX - this.startX)
-    )
-    this.rotation = _rotationStart + rotationDelta * orientation
-  }
+  'use strict' 
 
 
   /* Private */
 
   var _isDragging = false
-  var _isRotating = false
   var _roads = []
-  var _rotationStart
-  var _rotationStartX
-  var _rotationStartY
   var _viewport = document.getElementById('viewport')
   var _viewportContext = _viewport.getContext('2d')
 
@@ -89,46 +22,25 @@ window.onload = () => {
     _viewport.width = _viewport.width
   }
 
-  var _distance = function (startX, startY, endX, endY) {
-    var diffX = Math.abs(startX - endX)
-    var diffY = Math.abs(startY - endY)
-    var distance = Math.sqrt(diffX * diffX + diffY * diffY)
-    return distance
+  var _lastRoad = function () {
+    return _roads[_roads.length - 1]
   }
 
-  var _drawAnchor = function (event) {    
+  var _render = function (event) {
+    _clearViewport()
+    _renderAnchor(event)
+    _roads.forEach(road => road.render(_viewportContext))
+  }
+
+  var _renderAnchor = function (event) {    
     _viewportContext.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
     _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
     _viewportContext.fill()
   }
 
-  var _render = function (event) {
-    if (_isDragging) {
-      var road = _roads[_roads.length - 1]
-      road.endX = event.x
-      road.endY = event.y
-      if (_isRotating) {
-        road.updateRotation()
-      }
-      road.invalidate()
-    }
-
-    _clearViewport()
-    _drawAnchor(event)
-    _roads.forEach(road => road.render())
-  }
-
   var _resizeViewport = function () {
     _viewport.height = window.innerHeight
     _viewport.width = window.innerWidth
-  }
-
-  var _startRotation = function () {    
-    var road = _roads[_roads.length - 1]
-    _rotationStart = road.rotation
-    _rotationStartX = road.endX
-    _rotationStartY = road.endY
-    _isRotating = true
   }
 
 
@@ -145,19 +57,30 @@ window.onload = () => {
     _render(event)
   })
 
-  _viewport.addEventListener('mousemove', _render)
+  _viewport.addEventListener('mousemove', event => {
+    if (_isDragging) {
+      _lastRoad().updateEndpoint(event)
+    }
+    _render(event)
+  })
 
-  _viewport.addEventListener('mouseup', event => { _isDragging = false })
+  _viewport.addEventListener('mouseup', event => {
+    _isDragging = false
+  })
 
   window.addEventListener('keydown', event => {
     if (_isDragging && event.ctrlKey) {
-      _startRotation()
+      _lastRoad().startRotation()
     }
   })
 
-  window.addEventListener('keyup', event => { _isRotating = false })
+  window.addEventListener('keyup', event => {
+    _lastRoad().stopRotation()
+  })
 
-  window.addEventListener('resize', _resizeViewport)
+  window.addEventListener('resize', event => {
+    _resizeViewport()
+  })
 }
 </script>  
 </head>
