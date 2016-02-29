@@ -25,7 +25,7 @@ window.onload = () => {
     return false
   }
 
-  Road.prototype.project = function () {
+  Road.prototype.invalidate = function () {    
 
     // Anchor
     var a = _distance(0, 0, this.startX, this.startY)
@@ -43,6 +43,34 @@ window.onload = () => {
     var delta = gamma - this.rotation * orientation
     this.dimensionX = c * Math.cos(delta)
     this.dimensionY = c * Math.sin(delta) * orientation
+  }
+
+  Road.prototype.render = function () {
+    _viewportContext.rotate(this.rotation)
+    _viewportContext.fillStyle = this.contains(event.x, event.y) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
+    _viewportContext.fillRect(
+      this.anchorX, this.anchorY,
+      this.dimensionX, this.dimensionY
+    )
+    _viewportContext.rotate(-this.rotation)
+  }
+
+  Road.prototype.updateRotation = function () {    
+    var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, this.endX, this.endY)
+    var roadStartToRotationStart = _distance(this.startX, this.startY, _rotationStartX, _rotationStartY)
+    var roadStartToRoadEnd = _distance(this.startX, this.startY, this.endX, this.endY)
+    var rotationDelta =
+      Math.acos(
+        (roadStartToRoadEnd * roadStartToRoadEnd +
+         roadStartToRotationStart * roadStartToRotationStart -
+         rotationStartToRoadEnd * rotationStartToRoadEnd) /
+        (2 * roadStartToRoadEnd * roadStartToRotationStart)
+      )
+    var orientation = Math.sign(
+      (_rotationStartX - this.startX) * (this.endY - this.startY) -
+      (_rotationStartY - this.startY) * (this.endX - this.startX)
+    )
+    this.rotation = _rotationStart + rotationDelta * orientation
   }
 
 
@@ -68,9 +96,39 @@ window.onload = () => {
     return distance
   }
 
+  var _drawAnchor = function (event) {    
+    _viewportContext.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
+    _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
+    _viewportContext.fill()
+  }
+
+  var _render = function (event) {
+    if (_isDragging) {
+      var road = _roads[_roads.length - 1]
+      road.endX = event.x
+      road.endY = event.y
+      if (_isRotating) {
+        road.updateRotation()
+      }
+      road.invalidate()
+    }
+
+    _clearViewport()
+    _drawAnchor(event)
+    _roads.forEach(road => road.render())
+  }
+
   var _resizeViewport = function () {
     _viewport.height = window.innerHeight
     _viewport.width = window.innerWidth
+  }
+
+  var _startRotation = function () {    
+    var road = _roads[_roads.length - 1]
+    _rotationStart = road.rotation
+    _rotationStartX = road.endX
+    _rotationStartY = road.endY
+    _isRotating = true
   }
 
 
@@ -81,85 +139,23 @@ window.onload = () => {
 
   /* Event bindings */
 
-  _viewport.addEventListener('mousedown', (event) => {
+  _viewport.addEventListener('mousedown', event => {
     _roads.push(new Road(event.x, event.y))
     _isDragging = true
-
-    // Draw the anchor
-    _clearViewport()
-    _viewportContext.fillStyle = 'rgba(20,200,80,0.5)'
-    _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
-    _viewportContext.fill()
+    _render(event)
   })
 
-  _viewport.addEventListener('mousemove', (event) => {
+  _viewport.addEventListener('mousemove', _render)
 
-    // If dragging, then update the current road
-    if (_isDragging) {
+  _viewport.addEventListener('mouseup', event => { _isDragging = false })
 
-      // Update the endpoint
-      var road = _roads[_roads.length - 1]
-      road.endX = event.x
-      road.endY = event.y
-
-      // Update the rotation
-      if (_isRotating) {
-        var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, road.endX, road.endY)
-        var roadStartToRotationStart = _distance(road.startX, road.startY, _rotationStartX, _rotationStartY)
-        var roadStartToRoadEnd = _distance(road.startX, road.startY, road.endX, road.endY)
-        var rotationDelta =
-          Math.acos(
-            (roadStartToRoadEnd * roadStartToRoadEnd +
-             roadStartToRotationStart * roadStartToRotationStart -
-             rotationStartToRoadEnd * rotationStartToRoadEnd) /
-            (2 * roadStartToRoadEnd * roadStartToRotationStart)
-          )
-        var orientation = Math.sign(
-          (_rotationStartX - road.startX) * (road.endY - road.startY) -
-          (_rotationStartY - road.startY) * (road.endX - road.startX)
-        )
-        road.rotation = _rotationStart + rotationDelta * orientation
-      }
-
-      // Update the projection
-      road.project()
-    }
-
-    // Draw the anchor
-    _clearViewport()
-    _viewportContext.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
-    _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
-    _viewportContext.fill()
-
-    // Draw each road
-    _roads.forEach((road) => {
-      _viewportContext.rotate(road.rotation)
-      _viewportContext.fillStyle = road.contains(event.x, event.y) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
-      _viewportContext.fillRect(
-        road.anchorX, road.anchorY,
-        road.dimensionX, road.dimensionY
-      )
-      _viewportContext.rotate(-road.rotation)
-    })
-  })
-
-  _viewport.addEventListener('mouseup', (event) => {
-    _isDragging = false
-  })
-
-  window.addEventListener('keydown', (event) => {
+  window.addEventListener('keydown', event => {
     if (_isDragging && event.ctrlKey) {
-      var road = _roads[_roads.length - 1]
-      _rotationStart = road.rotation
-      _rotationStartX = road.endX
-      _rotationStartY = road.endY
-      _isRotating = true
+      _startRotation()
     }
   })
 
-  window.addEventListener('keyup', (event) => {
-    _isRotating = false
-  })
+  window.addEventListener('keyup', event => { _isRotating = false })
 
   window.addEventListener('resize', _resizeViewport)
 }
