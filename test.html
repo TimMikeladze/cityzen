@@ -10,12 +10,19 @@ window.onload = () => {
   'use strict'
 
 
+  /* Road class */
+
   var Road = function (startX, startY) {
     this.startX = startX
     this.startY = startY
     this.endX = startX
     this.endY = startY
     this.rotation = 0
+  }
+
+  Road.prototype.contains = function (x, y) {
+    //TODO Alex
+    return false
   }
 
   Road.prototype.project = function () {
@@ -32,58 +39,60 @@ window.onload = () => {
     var c = _distance(this.startX, this.startY, this.endX, this.endY)
     var d = this.endX - this.startX
     var gamma = Math.acos(d / c)
-    var orientation = (this.endY > this.startY) ? 1 : (this.endY == this.startY) ? 0 : -1
+    var orientation = Math.sign(this.endY - this.startY)
     var delta = gamma - this.rotation * orientation
     this.dimensionX = c * Math.cos(delta)
     this.dimensionY = c * Math.sin(delta) * orientation
   }
 
 
-  var _canvas = document.getElementById('canvas')
-  var _context = _canvas.getContext('2d')
+  /* Private */
+
   var _isDragging = false
   var _isRotating = false
   var _roads = []
   var _rotationStart
   var _rotationStartX
   var _rotationStartY
+  var _viewport = document.getElementById('viewport')
+  var _viewportContext = _viewport.getContext('2d')
 
-  var _clearCanvas = () => {
-    _canvas.width = _canvas.width
+  var _clearViewport = function () {
+    _viewport.width = _viewport.width
   }
 
-  var _distance = (startX, startY, endX, endY) => {
+  var _distance = function (startX, startY, endX, endY) {
     var diffX = Math.abs(startX - endX)
     var diffY = Math.abs(startY - endY)
     var distance = Math.sqrt(diffX * diffX + diffY * diffY)
     return distance
   }
 
-  var _resizeCanvas = () => {    
-    _canvas.height = window.innerHeight
-    _canvas.width = window.innerWidth
+  var _resizeViewport = function () {
+    _viewport.height = window.innerHeight
+    _viewport.width = window.innerWidth
   }
 
 
   /* Initialization */
 
-  _resizeCanvas()
+  _resizeViewport()
 
 
   /* Event bindings */
 
-  _canvas.addEventListener('mousedown', (event) => {
+  _viewport.addEventListener('mousedown', (event) => {
     _roads.push(new Road(event.x, event.y))
     _isDragging = true
 
     // Draw the anchor
-    _clearCanvas()
-    _context.fillStyle = 'rgba(20,200,80,0.5)'
-    _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
-    _context.fill()
+    _clearViewport()
+    _viewportContext.fillStyle = 'rgba(20,200,80,0.5)'
+    _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
+    _viewportContext.fill()
   })
 
-  _canvas.addEventListener('mousemove', (event) => {
+  _viewport.addEventListener('mousemove', (event) => {
 
     // If dragging, then update the current road
     if (_isDragging) {
@@ -117,24 +126,24 @@ window.onload = () => {
     }
 
     // Draw the anchor
-    _clearCanvas()
-    _context.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
-    _context.arc(event.x, event.y, 10, 0, 2 * Math.PI)
-    _context.fill()
+    _clearViewport()
+    _viewportContext.fillStyle = _isDragging ? 'rgba(20,200,80,0.5)' : 'rgba(0,80,250,0.3)'
+    _viewportContext.arc(event.x, event.y, 10, 0, 2 * Math.PI)
+    _viewportContext.fill()
 
     // Draw each road
     _roads.forEach((road) => {
-      _context.rotate(road.rotation)
-      _context.fillStyle = 'rgba(100,100,100,0.5)'
-      _context.fillRect(
+      _viewportContext.rotate(road.rotation)
+      _viewportContext.fillStyle = road.contains(event.x, event.y) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
+      _viewportContext.fillRect(
         road.anchorX, road.anchorY,
         road.dimensionX, road.dimensionY
       )
-      _context.rotate(-road.rotation)
+      _viewportContext.rotate(-road.rotation)
     })
   })
 
-  _canvas.addEventListener('mouseup', (event) => {
+  _viewport.addEventListener('mouseup', (event) => {
     _isDragging = false
   })
 
@@ -152,13 +161,11 @@ window.onload = () => {
     _isRotating = false
   })
 
-  window.addEventListener('resize', _resizeCanvas)
-
+  window.addEventListener('resize', _resizeViewport)
 }
 </script>  
 </head>
 <body>
-<canvas id="canvas">
-</canvas>  
+<canvas id="viewport"></canvas>
 </body>
 </html>
