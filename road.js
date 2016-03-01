@@ -57,18 +57,15 @@ var Road = function () {
     return diagonal
   }
 
-  Road.prototype.render = function (context) {
+  Road.prototype.render = function (context, event, isDragging) {
     if (this.invalid) {
-
-      // Start (x,y)
+      this.invalid = false
       var a = _distance(0, 0, this.startX, this.startY)
       var alpha = Math.PI / 2 - this.rotation / 2
       var b = 2 * a * Math.cos(alpha)
       var beta = Math.PI - alpha - Math.acos(this.startX / a)
       this.renderStartX = this.startX + b * Math.cos(beta)
       this.renderStartY = this.startY - b * Math.sin(beta)
-
-      // Width, Height
       var c = this.diagonal()
       var d = this.endX - this.startX
       var gamma = Math.acos(d / c)
@@ -76,12 +73,9 @@ var Road = function () {
       var delta = gamma - this.rotation * orientation
       this.renderWidth = c * Math.cos(delta)
       this.renderHeight = c * Math.sin(delta) * orientation
-
-      this.invalid = false
     }
-
     context.rotate(this.rotation)
-    context.fillStyle = this.contains(event.x, event.y) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
+    context.fillStyle = (this.contains(event.x, event.y) || isDragging) ? 'rgba(20,200,80,0.5)' : 'rgba(100,100,100,0.5)'
     context.fillRect(
       this.renderStartX, this.renderStartY,
       this.renderWidth, this.renderHeight
@@ -100,9 +94,9 @@ var Road = function () {
     _isRotating = false
   }
 
-  Road.prototype.updateEndpoint = function (event) {
-    this.endX = event.x
-    this.endY = event.y
+  Road.prototype.updateEndpoint = function (x, y) {
+    this.endX = x
+    this.endY = y
     if (_isRotating) {
       var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, this.endX, this.endY)
       var roadStartToRotationStart = _distance(this.startX, this.startY, _rotationStartX, _rotationStartY)
@@ -142,4 +136,4 @@ var Road = function () {
   }
 
   return Road
-}() 
+}()
