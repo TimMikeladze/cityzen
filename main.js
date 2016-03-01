@@ -57,6 +57,7 @@ window.onload = function () {
 
   _viewport.addEventListener('mouseup', event => {
     _isDragging = false
+    console.log(_lastRoad().vertices())
   })
 
   window.addEventListener('keydown', event => {
@@ -66,7 +67,9 @@ window.onload = function () {
   })
 
   window.addEventListener('keyup', event => {
-    _lastRoad().stopRotation()
+    if (_lastRoad()) {
+      _lastRoad().stopRotation()
+    }    
   })
 
   window.addEventListener('resize', event => {

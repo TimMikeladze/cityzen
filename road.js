@@ -21,22 +21,46 @@ var Road = function () {
   /* Public */
 
   var Road = function (startX, startY) {
+    this.startX = startX
+    this.startY = startY
     this.endX = startX
     this.endY = startY
     this.rotation = 0
-    this.startX = startX
-    this.startY = startY
   }
 
   Road.prototype.contains = function (x, y) {
-    //TODO Alex
-    return false
+    var intersections = 0
+    var vertices = this.vertices()
+    vertices.forEach((vertex, i) => {
+      var vertexNext = vertices[(i + 1) % vertices.length]
+      var vertexA = (vertex.y < vertexNext.y) ? vertex : vertexNext
+      var vertexB = (vertex.y < vertexNext.y) ? vertexNext : vertex
+      y += (y === vertexA.y || y === vertexB.y) ? 0.00001 : 0
+      if (y >= vertexA.y && y <= vertexB.y && x <= Math.max(vertexA.x, vertexB.x)) {
+        if (x < Math.min(vertexA.x, vertexB.x)) {
+          intersections++
+        } else {
+          var slopePoint = (y - vertexA.y) / (x - vertexA.x)
+          var slopeVertex = (vertexB.y - vertexA.y) / (vertexB.x - vertexA.x)
+          if (slopePoint >= slopeVertex) {
+            intersections++
+          }
+        }
+      }
+    })
+    var isPointInside = (intersections % 2 === 1)
+    return isPointInside
+  }
+
+  Road.prototype.diagonal = function () {
+    var diagonal = _distance(this.startX, this.startY, this.endX, this.endY)
+    return diagonal
   }
 
   Road.prototype.render = function (context) {
     if (this.invalid) {
 
-      // Anchor
+      // Start (x,y)
       var a = _distance(0, 0, this.startX, this.startY)
       var alpha = Math.PI / 2 - this.rotation / 2
       var b = 2 * a * Math.cos(alpha)
@@ -44,8 +68,8 @@ var Road = function () {
       this.renderStartX = this.startX + b * Math.cos(beta)
       this.renderStartY = this.startY - b * Math.sin(beta)
 
-      // Dimensions
-      var c = _distance(this.startX, this.startY, this.endX, this.endY)
+      // Width, Height
+      var c = this.diagonal()
       var d = this.endX - this.startX
       var gamma = Math.acos(d / c)
       var orientation = Math.sign(this.endY - this.startY)
@@ -79,11 +103,6 @@ var Road = function () {
   Road.prototype.updateEndpoint = function (event) {
     this.endX = event.x
     this.endY = event.y
-    this.updateRotation()
-    this.invalid = true
-  }
-
-  Road.prototype.updateRotation = function () {
     if (_isRotating) {
       var rotationStartToRoadEnd = _distance(_rotationStartX, _rotationStartY, this.endX, this.endY)
       var roadStartToRotationStart = _distance(this.startX, this.startY, _rotationStartX, _rotationStartY)
@@ -101,6 +120,25 @@ var Road = function () {
       )
       this.rotation = _rotationStart + rotationDelta * orientation
     }
+    this.invalid = true
+  }
+
+  Road.prototype.vertices = function () {
+    var a = this.endX - this.startX
+    var b = this.endY - this.startY
+    var c = this.diagonal()
+    var alpha = Math.acos(a / c)
+    var beta = alpha - this.rotation
+    var d = c * Math.cos(beta)
+    var x = d * Math.cos(this.rotation)
+    var y = d * Math.sin(this.rotation)
+    var vertices = [
+      { x: this.startX, y: this.startY },
+      { x: this.startX + x, y: this.startY + y },
+      { x: this.endX, y: this.endY },
+      { x: this.endX - x, y: this.endY - y }
+    ]
+    return vertices
   }
 
   return Road
