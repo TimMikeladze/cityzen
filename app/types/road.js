@@ -13,8 +13,8 @@ var Road = function () {
   /* Public */
 
   var Road = function (start) {
-    if (start.x === undefined || start.y === undefined) {
-      throw new SyntaxError('new Road requires a first argument of type object with properties x and y')
+    if (!(start instanceof Point)) {
+      throw new SyntaxError('new Road requires a first argument that is an instance of Point')
     }
     this.start = start
     this.rotation = 0
@@ -99,8 +99,8 @@ var Road = function () {
   }
 
   Road.prototype.updateEnd = function (point) {
-    if (point.x === undefined || point.y === undefined) {
-      throw new SyntaxError('updateEnd requires a first argument of type object with properties x and y')
+    if (!(point instanceof Point)) {
+      throw new SyntaxError('new Road requires a first argument that is an instance of Point')
     }
 
     // Set the endpoint
