@@ -5,10 +5,10 @@ var Point = function () {
 
   /* Public */
   
-	var Point = function (x, y) {
-	  this.x = x
-	  this.y = y
-	}
+  var Point = function (x, y) {
+    this.x = x
+    this.y = y
+  }
 
   Point.prototype.to = function (point) {
     if (point.x === undefined || point.y === undefined) {

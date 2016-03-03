@@ -8,7 +8,7 @@ var CursorStore = function () {
   }
   
   Dispatcher.register(Actions.mouseMove, function move(event) {
-    store.position = new Point (event.x, event.y)
+    store.position = new Point(event.x, event.y)
     View.render()
   })
 
