@@ -7,10 +7,12 @@ export const Actions = {
         };
     },
 
-    mouseDown() {
+    mouseDown(event) {
         return {
             type: 'MOUSE_DOWN',
-            isDragging: true
+            isDragging: true,
+            roadX: event.x,
+            roadY: event.y
         }
     },
 
